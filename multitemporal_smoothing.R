@@ -1,7 +1,7 @@
 # computation of multitemporal statistics
 # John Truckenbrodt 2016
-# this sccript takes a 3D raster stack and allows for parallel computing of user-defined multitemporal statistics 
-# (i.e. along the  third dimension of the stack)
+# this script takes a 3D raster stack and allows for parallel computing of user-defined multitemporal transformations (e.g. smoothing)
+# along the  third dimension of the stack
 
 # load required packages
 library(abind)
