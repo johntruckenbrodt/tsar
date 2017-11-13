@@ -1,6 +1,7 @@
-# Time Series Automation for Raster images
+# Time Series computation Automation for Raster images
 # John Truckenbrodt 2016-2017
-# the function tsar of this script takes a 3D raster stack and allows for parallelized computation of user-defined multitemporal statistics 
+# the function tsar of this script takes a 3D raster stack and 
+# allows for parallelized computation of user-defined multitemporal statistics 
 ################################################################
 # function to unregister parallel computing backend
 unregister=function(cluster){
@@ -39,7 +40,8 @@ hms_span=function(start,end){
 #todo make every node combine by itself
 #todo enable multiple na.out values
 #todo memory monitoring
-tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
+tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
   require(abind)
   require(raster)
   require(foreach)
@@ -158,7 +160,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # perform the actual computations
   # extra option for exporting the whole global enivronment: .export=ls(envir=globalenv())
-  out.arr=foreach(i=seq(strat),.combine=collector,.verbose=verbose,.packages=packages,.multicombine=T,.maxcombine=length(strat))%dopar%{
+  out.arr=foreach(i=seq(strat),.combine=collector,.verbose=verbose,.packages=packages,
+                  .multicombine=T,.maxcombine=length(strat))%dopar%{
     indices=strat[[i]]
     rows.sub=length(indices)
     
