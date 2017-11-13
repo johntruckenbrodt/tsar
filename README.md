@@ -1,5 +1,5 @@
 # TSAR
-## Time-Series computation Automation for Raster Images
+## Time-Series computation Automation for Raster images
 These scripts offer functionality to:
 * compute multitemporal statistics
 * apply transforming computations (e.g. time series spline smoothing)
