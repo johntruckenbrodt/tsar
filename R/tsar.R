@@ -41,22 +41,23 @@ hms_span=function(start,end){
 #todo enable multiple na.out values
 #todo memory monitoring
 
-#' \code{tsar} scalable time-series computations on 3D raster stacks
+#' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
 #' @param workers a named list containing the functions for computation
-#' @param cores the number of parallel processes
-#' @param out.name the name of the output. Either a single file or a folder separate files (determined by parameter separate)
-#' @param out.bandnames (optional) the names of the output bands; names are determined from the function names in workers if left empty
-#' @param out.dtype the datatype of the written files
+#' @param cores the number of parallel processes per node
+#' @param out.name the name of the output. Either a single file or a folder of separate files (determined by parameter \code{separate})
+#' @param out.bandnames (optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty
+#' @param out.dtype the datatype of the written files. 
+#' See \code{\link[raster]{dataType}} for possible values.
 #' @param separate should the resulting band be written to indivudual files? Otherwise a single ENVI block is written.
-#' @param na.in the pixel value for NA in raster.name
+#' @param na.in the pixel value for NA in \code{raster.name}
 #' @param na.out the pixel value for NA in the output files
-#' @param overwrite should the outputfiles be overwritten if they already exist? If separate all output files are checked
+#' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
 #' @param verbose write detailed information on the progress of function execution
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
 #' @return None
 #' @export
-#' @seealso \code{\link{raster}}, \code{\link{foreach}}, \code{\link{doSNOW}}
+#' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
@@ -163,7 +164,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
       stop(message)
     }
     hostList=lapply(hosts,function(x)list(host=x))
-    cl=makeCluster(hostList,type="SOCK")
+    cl=snow::makeCluster(hostList,type="SOCK")
     processes=length(hosts)
   }else{
     cl=snow::makeCluster(cores)

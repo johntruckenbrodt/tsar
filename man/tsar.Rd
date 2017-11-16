@@ -2,7 +2,7 @@
 % Please edit documentation in R/tsar.R
 \name{tsar}
 \alias{tsar}
-\title{\code{tsar} scalable time-series computations on 3D raster stacks}
+\title{scalable time-series computations on 3D raster stacks}
 \usage{
 tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
   out.dtype = "FLT4S", separate = T, na.in = NA, na.out = -99,
@@ -13,21 +13,22 @@ tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
 
 \item{workers}{a named list containing the functions for computation}
 
-\item{cores}{the number of parallel processes}
+\item{cores}{the number of parallel processes per node}
 
-\item{out.name}{the name of the output. Either a single file or a folder separate files (determined by parameter separate)}
+\item{out.name}{the name of the output. Either a single file or a folder of separate files (determined by parameter \code{separate})}
 
-\item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names in workers if left empty}
+\item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty}
 
-\item{out.dtype}{the datatype of the written files}
+\item{out.dtype}{the datatype of the written files. 
+See \code{\link[raster]{dataType}} for possible values.}
 
 \item{separate}{should the resulting band be written to indivudual files? Otherwise a single ENVI block is written.}
 
-\item{na.in}{the pixel value for NA in raster.name}
+\item{na.in}{the pixel value for NA in \code{raster.name}}
 
 \item{na.out}{the pixel value for NA in the output files}
 
-\item{overwrite}{should the outputfiles be overwritten if they already exist? If separate all output files are checked}
+\item{overwrite}{should the output files be overwritten if they already exist? If \code{separate} all output files are checked}
 
 \item{verbose}{write detailed information on the progress of function execution}
 
@@ -37,8 +38,8 @@ tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
 None
 }
 \description{
-\code{tsar} scalable time-series computations on 3D raster stacks
+scalable time-series computations on 3D raster stacks
 }
 \seealso{
-\code{\link{raster}}, \code{\link{foreach}}, \code{\link{doSNOW}}
+\code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 }
