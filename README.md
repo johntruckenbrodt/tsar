@@ -39,12 +39,12 @@ workers = list(minimum=function(x)return(min(x, na.rm=T)),
 
 # define the cluster setup
 # In this case a total of 30 processes will be started: three nodes with 10 processes each
-# the node list is expected to contain a number of node names accesible via SSH without password
+# the node list is expected to contain a number of node names accessible via SSH without password
 processes = 10
 nodes = c("node1", "node2", "node3")
 
 # the scheme for writing the results
-# since separate is true outname will be a directory containing several GeoTiff files
+# since separate is true, outname will be a directory containing several GeoTiff files
 outname = "/path/to/write"
 separate = T
 
