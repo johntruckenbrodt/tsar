@@ -66,5 +66,5 @@ tsar::tsar(ras, workers, processes, outname,
 # in this scenario the band names of the ENVI stack would be the same as the names of 
 # the single GeoTiffs (i.e. minimum, average, ...)
 
-# in case the automatically generated output names can be overridden by parameter bandnames in tsar::tsar
+# the automatically generated output names can be overridden by parameter bandnames in tsar::tsar
 ```
