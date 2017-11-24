@@ -24,14 +24,16 @@ If individual GeoTiffs are written, out.name is going to be a directory with the
 ### Examples
 
 ```R
-# load the raster stack and define the NA value (this might not be necessary if the value is stored in the files)
+# load the raster stack
 ras = raster::stack(c("timestep1.tif", "timestep2.tif", "timestep3.tif"))
+
+# define the NA value; this might not be necessary if the value is stored in the files)
 raster::NAvalue(raster.ras)=-99
 
 # define a list of functions with names
 workers = list(minimum=function(x)return(min(x, na.rm=T)),
                med=function(x)return(median(x,na.rm=T)),
-			   maximum=function(x)return(max(x, na.rm=T))
+               maximum=function(x)return(max(x, na.rm=T))
 
 # define the cluster setup
 In this case a total of 30 processes will be started: three nodes with 10 processes each
@@ -43,7 +45,8 @@ nodes = c("node1", "node2", "node3")
 outname = "/path/to/write"
 separate = T
 
-tsar::tsar(ras, workers, processes, outname, separate=T, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
+tsar::tsar(ras, workers, processes, outname, 
+           separate=T, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
 
 # the following files will be written:
 # /path/to/write/minimum.tif
