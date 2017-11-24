@@ -51,7 +51,7 @@ separate = T
 tsar::tsar(ras, workers, processes, outname, 
            separate=T, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
 
-# the following files will be written:
+# the following files would be written:
 # /path/to/write/minimum.tif
 # /path/to/write/average.tif
 # /path/to/write/maximum.tif
@@ -66,5 +66,5 @@ tsar::tsar(ras, workers, processes, outname,
 # in this scenario the band names of the ENVI stack would be the same as the names of 
 # the single GeoTiffs (i.e. minimum, average, ...)
 
-# the automatically generated output names can be overridden by parameter bandnames in tsar::tsar
+# the automatically generated output names can be overridden by parameter out.bandnames in tsar::tsar
 ```
