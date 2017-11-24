@@ -33,8 +33,9 @@ raster::NAvalue(raster.ras)=-99
 
 # define a list of functions with names
 workers = list(minimum=function(x)return(min(x, na.rm=T)),
-               med=function(x)return(median(x,na.rm=T)),
-               maximum=function(x)return(max(x, na.rm=T)))
+               average=function(x)return(mean(x, na.rm=T)),
+               maximum=function(x)return(max(x, na.rm=T)),
+               quantiles=function(x)return(quantile(x,probs=c(.25, .5, .75),na.rm=T,names=F))))
 
 # define the cluster setup
 # In this case a total of 30 processes will be started: three nodes with 10 processes each
@@ -52,10 +53,18 @@ tsar::tsar(ras, workers, processes, outname,
 
 # the following files will be written:
 # /path/to/write/minimum.tif
-# /path/to/write/med.tif
+# /path/to/write/average.tif
 # /path/to/write/maximum.tif
+# /path/to/write/quantiles_1.tif
+# /path/to/write/quantiles_2.tif
+# /path/to/write/quantiles_3.tif
 
-# alternatively, if separate=F, a single ENVI stack:
+# alternatively, if separate=F, a single ENVI stack would be written:
 # /path/to/write
 # /path/to/write.hdr
+
+# in this scenario the band names of the ENVI stack would be the same as the names of 
+# the single GeoTiffs (i.e. minimum, average, ...)
+
+# in case the automatically generated output names can be overridden by parameter bandnames in tsar::tsar
 ```
