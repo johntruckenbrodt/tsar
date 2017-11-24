@@ -1,8 +1,3 @@
----
-output:
-  html_document: default
-  pdf_document: default
----
 # TSAR
 ## Time-Series computation Automation for Raster data
 These scripts offer functionality to:
