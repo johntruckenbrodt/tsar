@@ -36,7 +36,8 @@ workers = list(minimum=function(x)return(min(x, na.rm=T)),
                maximum=function(x)return(max(x, na.rm=T))
 
 # define the cluster setup
-In this case a total of 30 processes will be started: three nodes with 10 processes each
+# In this case a total of 30 processes will be started: three nodes with 10 processes each
+# the node list contains a number of nodes accesible via SSH without password
 processes = 10
 nodes = c("node1", "node2", "node3")
 
