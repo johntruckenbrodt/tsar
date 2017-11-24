@@ -231,27 +231,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
     rm(out.arr.sub,out.ras)
   }
-  # # transform the computed array into a raster object with geo information
-  # out.ras=if(class(out.arr)=="array") raster::brick(out.arr) else raster::raster(out.arr)
-  # raster::extent(out.ras)=raster::extent(ras.in)
-  # raster::projection(out.ras)=raster::projection(ras.in)
-  # 
-  # # write the raster to file
-  # 
-  # raster::rasterOptions(overwrite=overwrite,datatype=out.dtype,setfileext=F)
-  # if(!separate&&out.bands>1){
-  #   raster::writeRaster(out.ras,filename=out.name,format="ENVI",bandorder="BSQ",NAflag=na.out)
-  #   
-  #   # edit the band names of the resulting ENVI file to carry information of the computed measures 
-  #   # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
-  #   hdrbands(paste(out.name,".hdr",sep=""),bandnames)
-  # }else{
-  #   opt=c("COMPRESS=NONE")
-  #   for(i in seq(out.bands)){
-  #     out.name.band=paste(tools::file_path_sans_ext(out.name),"_", bandnames[i], ".tif", sep="")
-  #     raster::writeRaster(out.ras[[i]],filename=out.name.band,format="GTiff",bandorder="BSQ",NAflag=na.out,options=opt)
-  #   }
-  # }
+  # clean up and finish
   rm(out.arr)
   gc(verbose=F)
   if(verbose)cat(sprintf("elapsed time: %s\n",hms_span(start.time,Sys.time())))
