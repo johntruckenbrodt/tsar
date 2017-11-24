@@ -20,3 +20,33 @@ In this case, if individual workers return several values, each band will carry 
 Depending on whether the output is to be a single file or separate files, an ENVI stack or several GeoTiff files are written.
 In case an ENVI stack is written, the file itself is named as defined by out.name and the bandnames are written to the HDR file.
 If individual GeoTiffs are written, out.name is going to be a directory with the bandnames being the names of the GeoTiff files.
+
+### Examples
+
+```R
+# load the raster stack and define the NA value (this might not be necessary if the value is stored in the files)
+ras = raster::stack(c("timestep1.tif", "timestep2.tif", "timestep3.tif"))
+raster::NAvalue(raster.ras)=-99
+
+# define a list of functions with names
+workers = list(minimum=function(x)return(min(x, na.rm=T)),
+               med=function(x)return(median(x,na.rm=T)),
+			   maximum=function(x)return(max(x, na.rm=T))
+
+# define the cluster setup
+In this case a total of 30 processes will be started: three nodes with 10 processes each
+processes = 10
+nodes = c("node1", "node2", "node3")
+
+# the scheme for writing the results:
+# since separate is true outname will be a directory containing several GeoTiff files
+outname = "/path/to/write"
+separate = T
+
+tsar::tsar(ras, workers, processes, outname, separate=T, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
+
+# the following files will be written:
+# /path/to/write/minimum.tif
+# /path/to/write/med.tif
+# /path/to/write/maximum.tif
+```
