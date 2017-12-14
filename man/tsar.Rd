@@ -19,10 +19,10 @@ tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
 
 \item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty}
 
-\item{out.dtype}{the datatype of the written files. 
+\item{out.dtype}{the datatype of the written files. This can either be a single value or a vector of values of same length as the files to be written.
 See \code{\link[raster]{dataType}} for possible values.}
 
-\item{separate}{should the resulting band be written to indivudual files? Otherwise a single ENVI block is written.}
+\item{separate}{should the resulting band be written to individual files? Otherwise a single ENVI block is written.}
 
 \item{na.in}{the pixel value for NA in \code{raster.name}}
 
@@ -30,7 +30,7 @@ See \code{\link[raster]{dataType}} for possible values.}
 
 \item{overwrite}{should the output files be overwritten if they already exist? If \code{separate} all output files are checked}
 
-\item{verbose}{write detailed information on the progress of function execution}
+\item{verbose}{write detailed information on the progress of function execution?}
 
 \item{nodelist}{the names of additional server computing nodes accessible via SSH without password}
 }

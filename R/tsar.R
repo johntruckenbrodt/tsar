@@ -47,13 +47,13 @@ hms_span=function(start,end){
 #' @param cores the number of parallel processes per node
 #' @param out.name the name of the output. Either a single file or a folder of separate files (determined by parameter \code{separate})
 #' @param out.bandnames (optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty
-#' @param out.dtype the datatype of the written files. 
+#' @param out.dtype the datatype of the written files. This can either be a single value or a vector of values of same length as the files to be written.
 #' See \code{\link[raster]{dataType}} for possible values.
-#' @param separate should the resulting band be written to indivudual files? Otherwise a single ENVI block is written.
+#' @param separate should the resulting band be written to individual files? Otherwise a single ENVI block is written.
 #' @param na.in the pixel value for NA in \code{raster.name}
 #' @param na.out the pixel value for NA in the output files
 #' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
-#' @param verbose write detailed information on the progress of function execution
+#' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
 #' @return None
 #' @export
@@ -67,6 +67,11 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   #require(parallel)
   #require(doParallel)
   require(doSNOW)
+  
+  # abort if files are to be written in a single file but multiple values for out.dtype are defined
+  if(!separate&&length(out.dtype)>1){
+    stop("multiple values for out.dtype, but only one file to be written")
+  }
   
   start.time=Sys.time()
   
@@ -123,7 +128,17 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
   }
   
-  # abort if no worker is left to executed or if results are to be written to one file which already exists
+  # evaluate the data type(s) defined by out.dtype
+  if(separate){
+    if(length(out.dtype)==1&&out.bands>1){
+      out.dtype=rep(out.dtype,out.bands)
+    }
+    if(length(out.dtype)!=out.bands){
+      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",length(out.dtype),out.bands))
+    }
+  }
+  
+  # abort if no worker is left to be executed or if results are to be written to one file which already exists
   if(length(workers)==0|(!separate&file.exists(out.name))){
     message("no file to be written")
     return()
@@ -223,11 +238,12 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     out.ras=raster::raster(out.arr,template=ras.in)
     raster::writeRaster(out.ras,filename=outnames[1],format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
   }else{
-    raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
+    raster::rasterOptions(overwrite=T,setfileext=T)
     for(i in seq(out.bands)){
       out.arr.sub=abind::abind(lapply(out.arr,function(x)x[,,i]),along=1)
       out.ras=raster::raster(out.arr.sub,template=ras.in)
-      raster::writeRaster(out.ras,filename=outnames[i],format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
+      raster::writeRaster(out.ras,filename=outnames[i],format="GTiff",bandorder="BSQ",
+                          NAflag=na.out,options=c("COMPRESS=NONE"),datatype=out.dtype[i])
     }
     rm(out.arr.sub,out.ras)
   }
