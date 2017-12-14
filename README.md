@@ -70,9 +70,9 @@ tsar::tsar(ras, workers, processes, outname,
 # the automatically generated output names can be overridden by parameter out.bandnames in tsar::tsar
 ```
 
-### Examples
+### Installation
 
-This package is still under development and not yet registered officially on CRAN.
+This package is still under development and not yet officially registered on CRAN.
 You can install it like this:
 ```R
 library(devtools)
