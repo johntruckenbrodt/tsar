@@ -6,7 +6,7 @@
 \usage{
 tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
   out.dtype = "FLT4S", separate = T, na.in = NA, na.out = -99,
-  overwrite = T, verbose = T, nodelist = NULL)
+  overwrite = T, verbose = T, nodelist = NULL, mem_max = NULL)
 }
 \arguments{
 \item{raster.name}{a 3D raster object with dimensions in order lines-samples-time}
@@ -33,6 +33,8 @@ See \code{\link[raster]{dataType}} for possible values.}
 \item{verbose}{write detailed information on the progress of function execution?}
 
 \item{nodelist}{the names of additional server computing nodes accessible via SSH without password}
+
+\item{mem_max}{the maximum memory used per node in Mb; if left NULL the maximum is set tp 80% of all available memory}
 }
 \value{
 None
