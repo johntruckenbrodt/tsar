@@ -73,9 +73,15 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     stop("multiple values for out.dtype, but only one file to be written")
   }
   
+  if(!separate&&file.exists(out.name)){
+    stop("target file already exists")
+  }
+  
   start.time=Sys.time()
   
+  ###################################################
   # load data into raster object
+  
   if(class(raster.name)=="character"){
     ras.in=raster::stack(raster.name)
   }else if(class(raster.name)=="RasterStack"){
@@ -90,11 +96,13 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   rows=dim(ras.in)[1]
   cols=dim(ras.in)[2]
   bands=dim(ras.in)[3]
+  ###################################################
+  # perform a test computation on a single pixel, assess the output length and parse the bandnames accordingly
   
   #assess the length of the worker output
   sample=ras.in[rows%/%2,cols%/%2,][1,]
   sample.out=lapply(workers,function(x)x(sample))
-  out.bands=length(unlist(sample.out))
+  out.nbands=length(unlist(sample.out))
   
   # define the bandnames based on the user input (if existent) or the worker names
   if(is.null(out.bandnames)){
@@ -105,46 +113,75 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
       bandnames=c(bandnames,names)
     }
   }else{
-    if(length(out.bandnames)==out.bands){
+    if(length(out.bandnames)==out.nbands){
       bandnames=out.bandnames
     }else{
-      stop(sprintf("length mismatch of defined band names (%i) and sample output (%i)",length(out.bandnames),out.bands))
+      stop(sprintf("length mismatch of defined band names (%i) and sample output (%i)",length(out.bandnames),out.nbands))
     }
   }
+  ###################################################
+  # create names of the files to be produced and check whether any of them already exist
   
-  # check whether any of the files which will be produced already exist
-  if(overwrite==F){
-    if(separate){
-      #create output names and group them by responsible workers
-      outnames=unname(sapply(bandnames,function(x)paste0(tools::file_path_sans_ext(out.name),"_",x,".tif")))
-      indices=lapply(names(workers),function(x)rep(x,length(sample.out[[x]])))
-      namegroups=split(outnames,unlist(indices))
+  if(separate){
+    # create output names
+    outdir=tools::file_path_sans_ext(out.name)
+    dir.create(outdir,showWarnings=F)
+    
+    outnames=unname(sapply(bandnames,function(x)paste0(outdir,"/",x,".tif")))
+    
+    if(!overwrite){
+      # group output names by responsible workers
+      indices=unlist(lapply(names(workers),function(x)rep(x,length(sample.out[[x]]))))
+      namegroups=split(outnames,indices)
       
-      #check existence of output files and evaluate whether a worker has to be started
+      # check existence of output files and evaluate whether a worker has to be executed
       jobs=sapply(names(workers),function(x)!all(sapply(unlist(namegroups[[x]]),function(y)file.exists(y))))
       
-      #reduce the list of workers to those that need to be executed
+      # reduce the list of workers to those that need to be executed
       workers=workers[jobs]
+      
+      # abort if no worker is left to be executed
+      if(length(workers)==0){
+        message("no file to be written")
+        return()
+      }
+      
+      # reduce the list of outnames and data types to those bands produced by the updated list of workers
+      
+      indices=which(indices %in% names(workers))
+      
+      outnames=outnames[indices]
+      
+      if(length(out.dtype)==out.nbands){
+        out.dtype=out.dtype[indices]
+      }
+    }
+    
+    out.nfiles=length(outnames)
+    
+    # evaluate the data type(s) defined by out.dtype
+    if(length(out.dtype)==1&&out.nfiles>1){
+      out.dtype=rep(out.dtype,out.nfiles)
+    }
+    if(length(out.dtype)!=out.nfiles){
+      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",length(out.dtype),out.nbands))
     }
   }
+  ###################################################
+  # define the functions for executing the workers and combining the results
   
-  # evaluate the data type(s) defined by out.dtype
-  if(separate){
-    if(length(out.dtype)==1&&out.bands>1){
-      out.dtype=rep(out.dtype,out.bands)
-    }
-    if(length(out.dtype)!=out.bands){
-      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",length(out.dtype),out.bands))
-    }
+  # function for computing the defined measures
+  run=function(data,workers){
+    result=apply(data,c(1,2),function(x){return(unlist(lapply(workers,function(fun)fun(x))))})
+    return(if(out.nbands>1) aperm(result,c(2,3,1)) else result)
   }
   
-  # abort if no worker is left to be executed or if results are to be written to one file which already exists
-  if(length(workers)==0|(!separate&file.exists(out.name))){
-    message("no file to be written")
-    return()
-  }
-  
+  # function for collecting and combining the subarray computations from the single parallel processes into one final result
+  # collector=function(...){abind::abind(...,along=1)}
+  collector=list
+  ###################################################
   # set up the environment to be passed to the parallel workers
+  
   # this is likely not to work under Windows, see this link:
   # http://stackoverflow.com/questions/17345271/r-how-does-a-foreach-loop-find-a-function-that-should-be-invoked
   e=globalenv()
@@ -154,20 +191,9 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # list all currently loaded packages (to be passed to the parallel workers)
   packages=gsub("package:","",grep("package",search(),value=T))
-  
-  # function for computing the defined measures
-  run=function(data,workers){
-    result=apply(data,c(1,2),function(x){return(unlist(lapply(workers,function(fun)fun(x))))})
-    return(if(out.bands>1) aperm(result,c(2,3,1)) else result)
-  }
-  
-  # function for collecting and combining the subarray computations from the single parallel processes into one final result
-  # collector=function(...){abind::abind(...,along=1)}
-  collector=list
-  
-  # register parallel computing backend and pass the newly created function environment
-  #cl=parallel::makeCluster(cores)
-  #doParallel::registerDoParallel(cl,cores)
+
+  ###################################################
+  # register parallel computing backend and pass the newly created environment
   
   if(!is.null(nodelist)){
     # http://stackoverflow.com/questions/25370603/turn-on-all-cpus-for-all-nodes-on-a-cluster-snow-snowfall-package
@@ -182,12 +208,16 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     cl=snow::makeCluster(hostList,type="SOCK")
     processes=length(hosts)
   }else{
-    cl=snow::makeCluster(cores)
+    cl=snow::makeCluster(cores,type="SOCK")
     processes=cores
   }
-  
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
+
+  #cl=parallel::makeCluster(cores)
+  #doParallel::registerDoParallel(cl,cores)
+  ###################################################
+  # stratify the raster stack and execute the computations
   
   # define indices for splitting the 3D array along the y-axis into equal parts for each of the parallel processes
   strat=split(seq(nrow(ras.in)),cut(seq(nrow(ras.in)),breaks=processes,include.lowest=T))
@@ -206,24 +236,28 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     result=run(arr,workers)
     return(result)
   }
-  
+  ###################################################
   # unregister parallel computing backend
+  
   #unregister(cl)
   snow::stopCluster(cl)
+  ###################################################
+  # write the results to disk
   
   if(verbose)cat("writing results to disk\n")
   
-  if(!separate&&out.bands>1){
+  # case I: multiple bands into a single ENVI block
+  if(!separate&&out.nbands>1){
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=F)
-    out.ras=raster::brick(raster::extent(ras.in),nrows=rows,ncols=cols,crs=raster::projection(ras.in),nl=out.bands)
+    out.ras=raster::brick(raster::extent(ras.in),nrows=rows,ncols=cols,crs=raster::projection(ras.in),nl=out.nbands)
 
     out.ras=raster::writeStart(out.ras,filename=out.name,format="ENVI",bandorder="BSQ",NAflag=na.out)
     i=1
     for(sub in out.arr){
       rows.sub=dim(sub)[1]
       sub=aperm(sub,c(2,1,3))
-      dim(sub)=c(rows.sub*cols,out.bands)
+      dim(sub)=c(rows.sub*cols,out.nbands)
       out.ras=raster::writeValues(out.ras,sub,i)
       i=i+rows.sub
     }
@@ -232,14 +266,20 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     # edit the band names of the resulting ENVI file to carry information of the computed measures
     # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
     hdrbands(paste(out.name,".hdr",sep=""),bandnames)
-  }else if(out.bands==1){
+    
+  }else if(out.nbands==1){
+    # case II: a single band written to a single GeoTiff
+    
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
     out.arr=abind::abind(out.arr,along=1)
     out.ras=raster::raster(out.arr,template=ras.in)
-    raster::writeRaster(out.ras,filename=outnames[1],format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
+    raster::writeRaster(out.ras,filename=paste0(out.name,".tif"),format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
+    
   }else{
+    # case III: multiple bands each written to a single-band GeoTiff
+    
     raster::rasterOptions(overwrite=T,setfileext=T)
-    for(i in seq(out.bands)){
+    for(i in seq(out.nbands)){
       out.arr.sub=abind::abind(lapply(out.arr,function(x)x[,,i]),along=1)
       out.ras=raster::raster(out.arr.sub,template=ras.in)
       raster::writeRaster(out.ras,filename=outnames[i],format="GTiff",bandorder="BSQ",
@@ -247,7 +287,9 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
     rm(out.arr.sub,out.ras)
   }
+  ###################################################
   # clean up and finish
+  
   rm(out.arr)
   gc(verbose=F)
   if(verbose)cat(sprintf("elapsed time: %s\n",hms_span(start.time,Sys.time())))
