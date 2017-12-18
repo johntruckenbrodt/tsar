@@ -49,8 +49,8 @@ nodes = c("node1", "node2", "node3")
 outname = "/path/to/write"
 separate = TRUE
 
-tsar::tsar(ras, workers, processes, outname, 
-           separate=separate, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
+tsar::tsar(raster.name=ras, workers=workers, cores=processes, out.name=outname, 
+           separate=separate, na.out=-99, overwrite=FALSE, verbose=TRUE, nodelist=nodes)
 
 # the following files would be written:
 # /path/to/write/minimum.tif
