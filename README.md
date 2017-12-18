@@ -47,10 +47,10 @@ nodes = c("node1", "node2", "node3")
 # the scheme for writing the results
 # since separate is true, outname will be a directory containing several GeoTiff files
 outname = "/path/to/write"
-separate = T
+separate = TRUE
 
 tsar::tsar(ras, workers, processes, outname, 
-           separate=T, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
+           separate=separate, na.out=-99, overwrite=F, verbose=T, nodelist=nodes)
 
 # the following files would be written:
 # /path/to/write/minimum.tif
