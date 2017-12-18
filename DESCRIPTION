@@ -6,5 +6,5 @@ Date: 2017-11-13
 Author: John Truckenbrodt <john.truckenbrodt@uni-jena.de>
 Description: scalable computation of time series statistics and transformations
 License: MIT
-Depends: abind, raster, foreach, doSNOW, parallel
+Depends: abind, raster, foreach, snow, doSNOW, parallel
 RoxygenNote: 6.0.1
