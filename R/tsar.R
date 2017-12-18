@@ -223,7 +223,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   mem_sys=as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",intern=T))/1024*.8
   
   # reset the define maximum memory if it is larger than the memory currently available on the system
-  if(!is.null(mem_max)&&mem_max>mem_sys){
+  if(is.null(mem_max)||mem_max>mem_sys){
     mem_max=mem_sys
   }
   
