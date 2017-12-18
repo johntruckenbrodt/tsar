@@ -55,12 +55,13 @@ hms_span=function(start,end){
 #' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
+#' @param mem_max the maximum memory used per node in Mb; if left NULL the maximum is set tp 80% of all available memory
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, mem_max=NULL){
   require(abind)
   require(raster)
   require(foreach)
@@ -206,10 +207,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
     hostList=lapply(hosts,function(x)list(host=x))
     cl=snow::makeCluster(hostList,type="SOCK")
-    processes=length(hosts)
   }else{
     cl=snow::makeCluster(cores,type="SOCK")
-    processes=cores
   }
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
@@ -217,10 +216,30 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   #cl=parallel::makeCluster(cores)
   #doParallel::registerDoParallel(cl,cores)
   ###################################################
-  # stratify the raster stack and execute the computations
+  # determine the stratification from the available memory
   
+  # determine the available memory
+  gc(verbose=F)
+  mem_sys=as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",intern=T))/1024*.8
+  
+  # reset the define maximum memory if it is larger than the memory currently available on the system
+  if(!is.null(mem_max)&&mem_max>mem_sys){
+    mem_max=mem_sys
+  }
+  
+  # estimate the required memory per image row in Mb
+  mem_row=((cols*bands*8)+(cols*out.nfiles*8))/1024/1024
+  
+  # determine the maximum number of rows to be read by each subset
+  rows_proc=mem_max/cores/mem_row
+  
+  # determine the number of processes to be executed
+  processes=ceiling(rows/rows_proc)
+  ###################################################
+  # stratify the raster stack and execute the computations
+
   # define indices for splitting the 3D array along the y-axis into equal parts for each of the parallel processes
-  strat=split(seq(nrow(ras.in)),cut(seq(nrow(ras.in)),breaks=processes,include.lowest=T))
+  strat=split(seq(rows),cut(seq(rows),breaks=processes,include.lowest=T))
   
   # perform the actual computations
   # extra option for exporting the whole global enivronment: .export=ls(envir=globalenv())
