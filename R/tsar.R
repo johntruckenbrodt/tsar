@@ -170,17 +170,11 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
   }
   ###################################################
-  # define the functions for executing the workers and combining the results
+  # define the functions for executing the workers
   
-  # function for computing the defined measures
-  run=function(data,workers){
-    result=apply(data,c(1,2),function(x){return(unlist(lapply(workers,function(fun)fun(x))))})
-    return(if(out.nbands>1) aperm(result,c(2,3,1)) else result)
+  run=function(x){
+    return(unlist(lapply(workers,function(fun)fun(x))))
   }
-  
-  # function for collecting and combining the subarray computations from the single parallel processes into one final result
-  # collector=function(...){abind::abind(...,along=1)}
-  collector=list
   ###################################################
   # set up the environment to be passed to the parallel workers
   
@@ -213,55 +207,12 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   }
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
-
-  #cl=parallel::makeCluster(cores)
-  #doParallel::registerDoParallel(cl,cores)
   ###################################################
-  # determine the stratification from the available memory
+  # execute the computations
   
-  # determine the available memory
-  gc(verbose=F)
-  mem_sys=as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",intern=T))/1024*.8
-  
-  # reset the define maximum memory if it is larger than the memory currently available on the system
-  if(is.null(mem_max)||mem_max>mem_sys){
-    mem_max=mem_sys
-  }
-  
-  # estimate the required memory per image row in Mb
-  mem_row=((cols*bands*8)+(cols*out.nfiles*8))/1024/1024
-  
-  # determine the maximum number of rows to be read by each subset
-  rows_proc=mem_max/cores/mem_row
-  
-  # determine the number of processes to be executed
-  processes=ceiling(rows/rows_proc)
-  
-  if(verbose)cat(sprintf("distributing work over %s processes\n",processes))
-  ###################################################
-  # stratify the raster stack and execute the computations
-
-  # define indices for splitting the 3D array along the y-axis into equal parts for each of the parallel processes
-  strat=split(seq(rows),cut(seq(rows),breaks=processes,include.lowest=T))
-  
-  # perform the actual computations
-  # extra option for exporting the whole global enivronment: .export=ls(envir=globalenv())
-  out.arr=foreach(i=seq(strat),.combine=collector,.verbose=verbose,.packages=packages,
-                  .multicombine=T,.maxcombine=length(strat))%dopar%{
-    indices=strat[[i]]
-    rows.sub=length(indices)
-    
-    arr=raster::getValuesBlock(ras.in,row=min(indices),nrows=rows.sub)
-    dim(arr)=c(cols,rows.sub,bands)
-    arr=aperm(arr,c(2,1,3))
-    
-    result=run(arr,workers)
-    return(result)
-  }
+  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run))
   ###################################################
   # unregister parallel computing backend
-  
-  #unregister(cl)
   snow::stopCluster(cl)
   ###################################################
   # write the results to disk
@@ -272,18 +223,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   if(!separate&&out.nbands>1){
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=F)
-    out.ras=raster::brick(raster::extent(ras.in),nrows=rows,ncols=cols,crs=raster::projection(ras.in),nl=out.nbands)
-
-    out.ras=raster::writeStart(out.ras,filename=out.name,format="ENVI",bandorder="BSQ",NAflag=na.out)
-    i=1
-    for(sub in out.arr){
-      rows.sub=dim(sub)[1]
-      sub=aperm(sub,c(2,1,3))
-      dim(sub)=c(rows.sub*cols,out.nbands)
-      out.ras=raster::writeValues(out.ras,sub,i)
-      i=i+rows.sub
-    }
-    out.ras=raster::writeStop(out.ras)
+    raster::writeRaster(ras.out,filename=out.name,format="ENVI",bandorder="BSQ",NAflag=na.out)
 
     # edit the band names of the resulting ENVI file to carry information of the computed measures
     # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
@@ -293,9 +233,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     # case II: a single band written to a single GeoTiff
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
-    out.arr=abind::abind(out.arr,along=1)
-    out.ras=raster::raster(out.arr,template=ras.in)
-    raster::writeRaster(out.ras,filename=paste0(out.name,".tif"),format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
+    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
     
   }else{
     # case III: multiple bands each written to a single-band GeoTiff
@@ -303,17 +241,14 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     raster::rasterOptions(overwrite=T,setfileext=T)
     for(i in seq(out.nbands)){
       if(verbose)cat("..%s\n",outnames[i])
-      out.arr.sub=abind::abind(lapply(out.arr,function(x)x[,,i]),along=1)
-      out.ras=raster::raster(out.arr.sub,template=ras.in)
-      raster::writeRaster(out.ras,filename=outnames[i],format="GTiff",bandorder="BSQ",
+      raster::writeRaster(ras.out[[i]],filename=outnames[i],format="GTiff",bandorder="BSQ",
                           NAflag=na.out,options=c("COMPRESS=NONE"),datatype=out.dtype[i])
     }
-    rm(out.arr.sub,out.ras)
   }
   ###################################################
   # clean up and finish
   
-  rm(out.arr)
+  rm(ras.out)
   gc(verbose=F)
   if(verbose)cat(sprintf("elapsed time: %s\n",hms_span(start.time,Sys.time())))
 }
