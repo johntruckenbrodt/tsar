@@ -40,6 +40,7 @@ hms_span=function(start,end){
 #todo make every node combine by itself
 #todo enable multiple na.out values
 #todo memory monitoring
+#todo test function raster::calc (in combination with directly writing with option bylayer=TRUE)
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -235,6 +236,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # determine the number of processes to be executed
   processes=ceiling(rows/rows_proc)
+  
+  if(verbose)cat(sprintf("distributing work over %s processes\n",processes))
   ###################################################
   # stratify the raster stack and execute the computations
 
@@ -299,6 +302,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     
     raster::rasterOptions(overwrite=T,setfileext=T)
     for(i in seq(out.nbands)){
+      if(verbose)cat("..%s\n",outnames[i])
       out.arr.sub=abind::abind(lapply(out.arr,function(x)x[,,i]),along=1)
       out.ras=raster::raster(out.arr.sub,template=ras.in)
       raster::writeRaster(out.ras,filename=outnames[i],format="GTiff",bandorder="BSQ",
