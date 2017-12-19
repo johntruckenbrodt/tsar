@@ -56,12 +56,13 @@ hms_span=function(start,end){
 #' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
+#' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ"){
   require(abind)
   require(raster)
   require(foreach)
@@ -169,7 +170,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
   }
   ###################################################
-  # define the functions for executing the workers
+  # define the function for executing the workers
   
   run=function(x){
     return(unlist(lapply(workers,function(fun)fun(x))))
@@ -222,7 +223,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   if(!separate&&out.nbands>1){
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=F)
-    raster::writeRaster(ras.out,filename=out.name,format="ENVI",bandorder="BSQ",NAflag=na.out)
+    raster::writeRaster(ras.out,filename=out.name,format="ENVI",bandorder=bandorder,NAflag=na.out)
 
     # edit the band names of the resulting ENVI file to carry information of the computed measures
     # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
@@ -232,7 +233,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     # case II: a single band written to a single GeoTiff
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
-    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",bandorder="BSQ",NAflag=na.out,options=c("COMPRESS=NONE"))
+    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",bandorder=bandorder,NAflag=na.out,options=c("COMPRESS=NONE"))
     
   }else{
     # case III: multiple bands each written to a single-band GeoTiff
@@ -240,7 +241,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     raster::rasterOptions(overwrite=T,setfileext=T)
     for(i in seq(out.nbands)){
       if(verbose)cat(sprintf("..%s\n",outnames[i]))
-      raster::writeRaster(ras.out[[i]],filename=outnames[i],format="GTiff",bandorder="BSQ",
+      raster::writeRaster(ras.out[[i]],filename=outnames[i],format="GTiff",bandorder=bandorder,
                           NAflag=na.out,options=c("COMPRESS=NONE"),datatype=out.dtype[i])
     }
   }
