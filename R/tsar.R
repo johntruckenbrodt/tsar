@@ -56,13 +56,12 @@ hms_span=function(start,end){
 #' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
-#' @param mem_max the maximum memory used per node in Mb; if left NULL the maximum is set tp 80% of all available memory
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, mem_max=NULL){
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL){
   require(abind)
   require(raster)
   require(foreach)
@@ -210,7 +209,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   ###################################################
   # execute the computations
   
-  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run))
+  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run),cl=cl)
   ###################################################
   # unregister parallel computing backend
   snow::stopCluster(cl)
