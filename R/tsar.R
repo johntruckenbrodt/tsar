@@ -239,7 +239,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     
     raster::rasterOptions(overwrite=T,setfileext=T)
     for(i in seq(out.nbands)){
-      if(verbose)cat("..%s\n",outnames[i])
+      if(verbose)cat(sprintf("..%s\n",outnames[i]))
       raster::writeRaster(ras.out[[i]],filename=outnames[i],format="GTiff",bandorder="BSQ",
                           NAflag=na.out,options=c("COMPRESS=NONE"),datatype=out.dtype[i])
     }
