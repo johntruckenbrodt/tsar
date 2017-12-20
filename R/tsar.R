@@ -40,7 +40,7 @@ hms_span=function(start,end){
 #todo make every node combine by itself
 #todo enable multiple na.out values
 #todo memory monitoring
-#todo test function raster::calc (in combination with directly writing with option bylayer=TRUE)
+#todo test raster::writeRaster parameter bylayer
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
