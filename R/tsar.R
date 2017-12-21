@@ -57,12 +57,13 @@ hms_span=function(start,end){
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
 #' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'
+#' @param maxmemory the maximum memory in Mb per node
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ"){
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory){
   require(abind)
   require(raster)
   require(foreach)
@@ -187,7 +188,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # list all currently loaded packages (to be passed to the parallel workers)
   packages=gsub("package:","",grep("package",search(),value=T))
-
+  
   ###################################################
   # register parallel computing backend and pass the newly created environment
   
@@ -208,9 +209,14 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
-  # execute the computations
+  # setup memory execute the computations
   
-  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run),cl=cl)
+  # compute the maximum number of cells which can be held in memory and pass it as raster options
+  cells=maxmemory/8*1024*1024
+  raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
+  
+  # run the processing
+  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl)
   ###################################################
   # unregister parallel computing backend
   snow::stopCluster(cl)
@@ -224,7 +230,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=F)
     raster::writeRaster(ras.out,filename=out.name,format="ENVI",bandorder=bandorder,NAflag=na.out)
-
+    
     # edit the band names of the resulting ENVI file to carry information of the computed measures
     # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
     hdrbands(paste(out.name,".hdr",sep=""),bandnames)
