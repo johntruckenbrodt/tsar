@@ -3,15 +3,6 @@
 # the function tsar of this script takes a 3D raster stack and 
 # allows for parallelized computation of user-defined multitemporal statistics 
 ################################################################
-# function to unregister parallel computing backend
-unregister=function(cluster){
-  require(parallel)
-  require(foreach)
-  parallel::stopCluster(cluster)
-  env=foreach:::.foreachGlobals
-  rm(list=ls(name=env),pos=env)
-}
-################################################################
 # edit the band names of an ENVI hdr file
 hdrbands=function(hdrfile, names){
   hdr=readLines(hdrfile)
@@ -35,11 +26,8 @@ hms_span=function(start,end){
 #todo change na.in=NA to something else
 #todo check Windows compatibility of environment passing (snow::clusterExport)
 #todo input variable checks!
-#todo compute .maxcombine from memory used
 #todo option for defining mask file
-#todo make every node combine by itself
 #todo enable multiple na.out values
-#todo memory monitoring
 #todo test raster::writeRaster parameter bylayer
 
 #' scalable time-series computations on 3D raster stacks
@@ -57,18 +45,16 @@ hms_span=function(start,end){
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
 #' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'
-#' @param maxmemory the maximum memory in Mb per node
+#' @param maxmemory the maximum memory in Mb used per node
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory){
+              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory=100){
   require(abind)
   require(raster)
   require(foreach)
-  #require(parallel)
-  #require(doParallel)
   require(doSNOW)
   
   # abort if files are to be written in a single file but multiple values for out.dtype are defined
