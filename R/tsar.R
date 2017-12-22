@@ -34,17 +34,20 @@ hms_span=function(start,end){
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
 #' @param workers a named list containing the functions for computation
 #' @param cores the number of parallel processes per node
-#' @param out.name the name of the output. Either a single file or a folder of separate files (determined by parameter \code{separate})
-#' @param out.bandnames (optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty
-#' @param out.dtype the datatype of the written files. This can either be a single value or a vector of values of same length as the files to be written.
-#' See \code{\link[raster]{dataType}} for possible values.
-#' @param separate should the resulting band be written to individual files? Otherwise a single ENVI block is written.
+#' @param out.name the name of the output. Either a single file or a folder of separate files 
+#' (determined by parameter \code{separate})
+#' @param out.bandnames (optional) the names of the output bands; names are determined from the function names 
+#' in \code{workers} if left empty
+#' @param out.dtype the datatype of the written files. This can either be a single value or a vector of values 
+#' of same length as the files to be written.
+#' See \code{\link[raster]{dataType}} for options.
+#' @param separate should the resulting bands be written to individual files? Otherwise a single ENVI block is written.
 #' @param na.in the pixel value for NA in \code{raster.name}
 #' @param na.out the pixel value for NA in the output files
 #' @param overwrite should the output files be overwritten if they already exist? If \code{separate} all output files are checked
 #' @param verbose write detailed information on the progress of function execution?
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
-#' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'
+#' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP' or 'BSQ'
 #' @param maxmemory the maximum memory in Mb used per node
 #' @return None
 #' @export
@@ -104,7 +107,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     if(length(out.bandnames)==out.nbands){
       bandnames=out.bandnames
     }else{
-      stop(sprintf("length mismatch of defined band names (%i) and sample output (%i)",length(out.bandnames),out.nbands))
+      stop(sprintf("length mismatch of defined band names (%i) and sample output (%i)"
+                   ,length(out.bandnames),out.nbands))
     }
   }
   ###################################################
@@ -152,7 +156,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
       out.dtype=rep(out.dtype,out.nfiles)
     }
     if(length(out.dtype)!=out.nfiles){
-      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",length(out.dtype),out.nbands))
+      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",
+                   length(out.dtype),out.nbands))
     }
   }
   ###################################################
@@ -224,7 +229,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     # case II: a single band written to a single GeoTiff
     
     raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
-    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",bandorder=bandorder,NAflag=na.out,options=c("COMPRESS=NONE"))
+    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",
+                        bandorder=bandorder,NAflag=na.out,options=c("COMPRESS=NONE"))
     
   }else{
     # case III: multiple bands each written to a single-band GeoTiff

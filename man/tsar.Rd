@@ -16,14 +16,17 @@ tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
 
 \item{cores}{the number of parallel processes per node}
 
-\item{out.name}{the name of the output. Either a single file or a folder of separate files (determined by parameter \code{separate})}
+\item{out.name}{the name of the output. Either a single file or a folder of separate files 
+(determined by parameter \code{separate})}
 
-\item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names in \code{workers} if left empty}
+\item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names 
+in \code{workers} if left empty}
 
-\item{out.dtype}{the datatype of the written files. This can either be a single value or a vector of values of same length as the files to be written.
-See \code{\link[raster]{dataType}} for possible values.}
+\item{out.dtype}{the datatype of the written files. This can either be a single value or a vector of values 
+of same length as the files to be written.
+See \code{\link[raster]{dataType}} for options.}
 
-\item{separate}{should the resulting band be written to individual files? Otherwise a single ENVI block is written.}
+\item{separate}{should the resulting bands be written to individual files? Otherwise a single ENVI block is written.}
 
 \item{na.in}{the pixel value for NA in \code{raster.name}}
 
@@ -35,7 +38,7 @@ See \code{\link[raster]{dataType}} for possible values.}
 
 \item{nodelist}{the names of additional server computing nodes accessible via SSH without password}
 
-\item{bandorder}{the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'}
+\item{bandorder}{the output file pixel arrangement,one of 'BIL', 'BIP' or 'BSQ'}
 
 \item{maxmemory}{the maximum memory in Mb used per node}
 }
