@@ -48,13 +48,12 @@ hms_span=function(start,end){
 #' @param maxmemory the maximum memory in Mb used per node
 #' @return None
 #' @export
-#' @seealso \code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
+#' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory=100){
-  require(abind)
   require(raster)
-  require(foreach)
+  require(snow)
   require(doSNOW)
   
   # abort if files are to be written in a single file but multiple values for out.dtype are defined

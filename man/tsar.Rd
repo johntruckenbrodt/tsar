@@ -6,7 +6,8 @@
 \usage{
 tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
   out.dtype = "FLT4S", separate = T, na.in = NA, na.out = -99,
-  overwrite = T, verbose = T, nodelist = NULL, mem_max = NULL)
+  overwrite = T, verbose = T, nodelist = NULL, bandorder = "BSQ",
+  maxmemory = 100)
 }
 \arguments{
 \item{raster.name}{a 3D raster object with dimensions in order lines-samples-time}
@@ -34,7 +35,9 @@ See \code{\link[raster]{dataType}} for possible values.}
 
 \item{nodelist}{the names of additional server computing nodes accessible via SSH without password}
 
-\item{mem_max}{the maximum memory used per node in Mb; if left NULL the maximum is set tp 80% of all available memory}
+\item{bandorder}{the output file pixel arrangement,one of 'BIL', 'BIP', or 'BSQ'}
+
+\item{maxmemory}{the maximum memory in Mb used per node}
 }
 \value{
 None
@@ -43,5 +46,5 @@ None
 scalable time-series computations on 3D raster stacks
 }
 \seealso{
-\code{\link[raster]{stack}}, \code{\link[foreach]{foreach}}, \code{\link[snow]{makeCluster}}
+\code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 }
