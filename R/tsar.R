@@ -67,6 +67,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   if(!separate&&file.exists(out.name)){
     stop("target file already exists")
   }
+  dir.create(dirname(out.name),showWarnings=F,recursive=T)
   
   start.time=Sys.time()
   
@@ -117,7 +118,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   if(separate){
     # create output names
     outdir=tools::file_path_sans_ext(out.name)
-    dir.create(outdir,showWarnings=F)
+    dir.create(outdir,showWarnings=F,recursive=T)
     
     outnames=unname(sapply(bandnames,function(x)paste0(outdir,"/",x,".tif")))
     
