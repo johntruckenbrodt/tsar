@@ -29,6 +29,7 @@ hms_span=function(start,end){
 #todo option for defining mask file
 #todo enable multiple na.out values
 #todo test raster::writeRaster parameter bylayer
+#todo consider a check if all files can be written
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -200,9 +201,9 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
-  # setup memory execute the computations
+  # setup memory and execute the computations
   
-  # compute the maximum number of cells which can be held in memory and pass it as raster options
+  # compute the maximum number of cells which can be held in memory and pass it as raster package option
   cells=maxmemory/8*1024*1024
   raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
   
