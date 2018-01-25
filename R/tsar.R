@@ -27,9 +27,8 @@ hms_span=function(start,end){
 #todo check Windows compatibility of environment passing (snow::clusterExport)
 #todo input variable checks!
 #todo option for defining mask file
-#todo enable multiple na.out values
-#todo test raster::writeRaster parameter bylayer
 #todo consider a check if all files can be written
+#todo investigate best block size configuration
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -39,8 +38,7 @@ hms_span=function(start,end){
 #' (determined by parameter \code{separate})
 #' @param out.bandnames (optional) the names of the output bands; names are determined from the function names 
 #' in \code{workers} if left empty
-#' @param out.dtype the datatype of the written files. This can either be a single value or a vector of values 
-#' of same length as the files to be written.
+#' @param out.dtype the datatype of the written files.
 #' See \code{\link[raster]{dataType}} for options.
 #' @param separate should the resulting bands be written to individual files? Otherwise a single ENVI block is written.
 #' @param na.in the pixel value for NA in \code{raster.name}
@@ -60,9 +58,9 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   require(snow)
   require(doSNOW)
   
-  # abort if files are to be written in a single file but multiple values for out.dtype are defined
-  if(!separate&&length(out.dtype)>1){
-    stop("multiple values for out.dtype, but only one file to be written")
+  # abort if multiple values for out.dtype are defined
+  if(length(out.dtype)>1){
+    stop("multiple values for out.dtype")
   }
   
   if(!separate&&file.exists(out.name)){
@@ -121,12 +119,12 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     outdir=tools::file_path_sans_ext(out.name)
     dir.create(outdir,showWarnings=F,recursive=T)
     
-    outnames=unname(sapply(bandnames,function(x)paste0(outdir,"/",x,".tif")))
+    out.name=unname(sapply(bandnames,function(x)paste0(outdir,"/",x,".tif")))
     
     if(!overwrite){
       # group output names by responsible workers
       indices=unlist(lapply(names(workers),function(x)rep(x,length(sample.out[[x]]))))
-      namegroups=split(outnames,indices)
+      namegroups=split(out.name,indices)
       
       # check existence of output files and evaluate whether a worker has to be executed
       jobs=sapply(names(workers),function(x)!all(sapply(unlist(namegroups[[x]]),function(y)file.exists(y))))
@@ -144,23 +142,10 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
       
       indices=which(indices %in% names(workers))
       
-      outnames=outnames[indices]
-      
-      if(length(out.dtype)==out.nbands){
-        out.dtype=out.dtype[indices]
-      }
+      out.name=out.name[indices]
     }
     
-    out.nfiles=length(outnames)
-    
-    # evaluate the data type(s) defined by out.dtype
-    if(length(out.dtype)==1&&out.nfiles>1){
-      out.dtype=rep(out.dtype,out.nfiles)
-    }
-    if(length(out.dtype)!=out.nfiles){
-      stop(sprintf("length mismatch of defined data types in out.dtype (%i) and files to be written (%i)",
-                   length(out.dtype),out.nbands))
-    }
+    out.nfiles=length(out.name)
   }
   ###################################################
   # define the function for executing the workers
@@ -201,6 +186,23 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
+  # setup the writing options
+  
+  if(!separate&&out.nbands>1){
+    # case I: multiple bands into a single ENVI block
+    
+    raster::rasterOptions(setfileext=F)
+    format="ENVI"
+    options=""
+  }else{
+    # case II: a single band written to a single GeoTiff
+    # case III: multiple bands each written to a single-band GeoTiff
+    
+    raster::rasterOptions(setfileext=T)
+    format="GTiff"
+    options=c("COMPRESS=NONE")
+  }
+  ###################################################
   # setup memory and execute the computations
   
   # compute the maximum number of cells which can be held in memory and pass it as raster package option
@@ -208,42 +210,16 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
   
   # run the processing
-  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl)
+  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
+                           filename=out.name, bandorder=bandorder, NAflag=na.out, 
+                           format=format, datatype=out.dtype, options=options)
+  
+  # edit the band names of the resulting ENVI file to carry information of the computed measures
+  # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
+  if(format=="ENVI")hdrbands(paste(out.name,".hdr",sep=""),bandnames)
   ###################################################
   # unregister parallel computing backend
   snow::stopCluster(cl)
-  ###################################################
-  # write the results to disk
-  
-  if(verbose)cat("writing results to disk\n")
-  
-  # case I: multiple bands into a single ENVI block
-  if(!separate&&out.nbands>1){
-    
-    raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=F)
-    raster::writeRaster(ras.out,filename=out.name,format="ENVI",bandorder=bandorder,NAflag=na.out)
-    
-    # edit the band names of the resulting ENVI file to carry information of the computed measures
-    # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
-    hdrbands(paste(out.name,".hdr",sep=""),bandnames)
-    
-  }else if(out.nbands==1){
-    # case II: a single band written to a single GeoTiff
-    
-    raster::rasterOptions(overwrite=T,datatype=out.dtype,setfileext=T)
-    raster::writeRaster(ras.out,filename=paste0(out.name,".tif"),format="GTiff",
-                        bandorder=bandorder,NAflag=na.out,options=c("COMPRESS=NONE"))
-    
-  }else{
-    # case III: multiple bands each written to a single-band GeoTiff
-    
-    raster::rasterOptions(overwrite=T,setfileext=T)
-    for(i in seq(out.nbands)){
-      if(verbose)cat(sprintf("..%s\n",outnames[i]))
-      raster::writeRaster(ras.out[[i]],filename=outnames[i],format="GTiff",bandorder=bandorder,
-                          NAflag=na.out,options=c("COMPRESS=NONE"),datatype=out.dtype[i])
-    }
-  }
   ###################################################
   # clean up and finish
   

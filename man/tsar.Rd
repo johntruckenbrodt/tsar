@@ -22,8 +22,7 @@ tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
 \item{out.bandnames}{(optional) the names of the output bands; names are determined from the function names 
 in \code{workers} if left empty}
 
-\item{out.dtype}{the datatype of the written files. This can either be a single value or a vector of values 
-of same length as the files to be written.
+\item{out.dtype}{the datatype of the written files.
 See \code{\link[raster]{dataType}} for options.}
 
 \item{separate}{should the resulting bands be written to individual files? Otherwise a single ENVI block is written.}
