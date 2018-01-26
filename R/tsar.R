@@ -1,5 +1,5 @@
 # Time Series computation Automation for Raster images
-# John Truckenbrodt 2016-2017
+# John Truckenbrodt 2016-2018
 # the function tsar of this script takes a 3D raster stack and 
 # allows for parallelized computation of user-defined multitemporal statistics 
 ################################################################
@@ -48,12 +48,13 @@ hms_span=function(start,end){
 #' @param nodelist the names of additional server computing nodes accessible via SSH without password
 #' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP' or 'BSQ'
 #' @param maxmemory the maximum memory in Mb used per node
+#' @param compress_tif should the written GeoTiff files be compressed?
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=T, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory=100){
+              separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory=100,compress_tif=F){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -64,8 +65,17 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   }
   
   if(!separate&&file.exists(out.name)){
-    stop("target file already exists")
+    stop("target file/directory already exists")
   }
+  
+  #the following would be better than the above check since file.exists is also TRUE if its input is in fact a directory.
+  #thus, it would not be possible to create a file with a name of an already existing directory.
+  #problem is, that the raster package tries to delete any item of that name if overwrite=TRUE.
+  #thus, it would try to delete a directory although a file is to be written.
+  # if(!separate&&file.exists(out.name)&&!file.info(out.name)$isdir){
+  #   stop("target file already exists")
+  # }
+  
   dir.create(dirname(out.name),showWarnings=F,recursive=T)
   
   start.time=Sys.time()
@@ -191,16 +201,16 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   if(!separate&&out.nbands>1){
     # case I: multiple bands into a single ENVI block
     
-    raster::rasterOptions(setfileext=F)
+    raster::rasterOptions(setfileext=F,overwrite=T)
     format="ENVI"
     options=""
   }else{
     # case II: a single band written to a single GeoTiff
     # case III: multiple bands each written to a single-band GeoTiff
     
-    raster::rasterOptions(setfileext=T)
+    raster::rasterOptions(setfileext=T,overwrite=T)
     format="GTiff"
-    options=c("COMPRESS=NONE")
+    options=if (compress_tif) c("COMPRESS=DEFLATE", "PREDICTOR=2") else c("COMPRESS=NONE")
   }
   ###################################################
   # setup memory and execute the computations
@@ -215,7 +225,6 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
                            format=format, datatype=out.dtype, options=options)
   
   # edit the band names of the resulting ENVI file to carry information of the computed measures
-  # (i.e. the names of the workers, e.g. minimum, maximum, p05, etc.)
   if(format=="ENVI")hdrbands(paste(out.name,".hdr",sep=""),bandnames)
   ###################################################
   # unregister parallel computing backend
