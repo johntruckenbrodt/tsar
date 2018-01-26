@@ -196,7 +196,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   doSNOW::registerDoSNOW(cl)
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
-  # setup the writing options
+  # setup options for file writing
   
   if(!separate&&out.nbands>1){
     # case I: multiple bands into a single ENVI block
@@ -225,7 +225,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
                            format=format, datatype=out.dtype, options=options)
   
   # edit the band names of the resulting ENVI file to carry information of the computed measures
-  if(format=="ENVI")hdrbands(paste(out.name,".hdr",sep=""),bandnames)
+  if(format=="ENVI")hdrbands(paste0(out.name,".hdr"),bandnames)
   ###################################################
   # unregister parallel computing backend
   snow::stopCluster(cl)
