@@ -7,7 +7,7 @@
 tsar(raster.name, workers, cores, out.name, out.bandnames = NULL,
   out.dtype = "FLT4S", separate = T, na.in = NA, na.out = -99,
   overwrite = F, verbose = T, nodelist = NULL, bandorder = "BSQ",
-  maxmemory = 100, compress_tif = F)
+  maxmemory = 100, compress_tif = F, mask = NULL)
 }
 \arguments{
 \item{raster.name}{a 3D raster object with dimensions in order lines-samples-time}
@@ -42,6 +42,9 @@ See \code{\link[raster]{dataType}} for options.}
 \item{maxmemory}{the maximum memory in Mb used per node}
 
 \item{compress_tif}{should the written GeoTiff files be compressed?}
+
+\item{mask}{an additional file or raster layer; computations on raster.name are only performed where mask is 1, 
+otherwise NA is returned for all resulting layers}
 }
 \value{
 None
