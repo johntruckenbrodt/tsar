@@ -49,12 +49,15 @@ hms_span=function(start,end){
 #' @param bandorder the output file pixel arrangement,one of 'BIL', 'BIP' or 'BSQ'
 #' @param maxmemory the maximum memory in Mb used per node
 #' @param compress_tif should the written GeoTiff files be compressed?
+#' @param mask an additional file or raster layer; computations on raster.name are only performed where mask is 1, 
+#' otherwise NA is returned for all resulting layers
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
-              separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, bandorder="BSQ",maxmemory=100,compress_tif=F){
+              separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
+              bandorder="BSQ",maxmemory=100,compress_tif=F,mask=NULL){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -122,6 +125,16 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }
   }
   ###################################################
+  #if a mask is defined, append it to the stack
+  
+  if(!is.null(mask)){
+    mask.ras=raster::raster(mask)
+    ras.in=raster::addLayer(ras.in,mask.ras)
+    apply_mask=T
+  }else{
+    apply_mask=F
+  }
+  ###################################################
   # create names of the files to be produced and check whether any of them already exist
   
   if(separate){
@@ -160,8 +173,20 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   ###################################################
   # define the function for executing the workers
   
+  #further reading/improvement:
+  #https://stackoverflow.com/questions/44593123/raster-calculation-on-rasterstack-only-if-not-na-in-other-rasterlayer
+  
   run=function(x){
-    return(unlist(lapply(workers,function(fun)fun(x))))
+    if(apply_mask){
+      if(!is.na(x[length(x)])&&x[length(x)]==1){
+        result=unlist(lapply(workers,function(fun)fun(x[-length(x)])))
+      }else{
+        result=rep(NA,out.nbands)
+      }
+    }else{
+      result=unlist(lapply(workers,function(fun)fun(x)))
+    }
+    return(result)
   }
   ###################################################
   # set up the environment to be passed to the parallel workers
