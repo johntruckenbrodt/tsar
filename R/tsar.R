@@ -26,8 +26,7 @@ hms_span=function(start,end){
 #todo change na.in=NA to something else
 #todo check Windows compatibility of environment passing (snow::clusterExport)
 #todo input variable checks!
-#todo option for defining mask file
-#todo consider a check if all files can be written
+#todo consider a check whether all files can be written
 #todo investigate best block size configuration
 
 #' scalable time-series computations on 3D raster stacks
@@ -57,7 +56,7 @@ hms_span=function(start,end){
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
-              bandorder="BSQ",maxmemory=100,compress_tif=F,mask=NULL){
+              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -243,6 +242,8 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   # compute the maximum number of cells which can be held in memory and pass it as raster package option
   cells=maxmemory/8*1024*1024
   raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
+  
+  if(verbose)raster::rasterOptions(progress="text")
   
   # run the processing
   ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
