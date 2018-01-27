@@ -28,6 +28,7 @@ hms_span=function(start,end){
 #todo input variable checks!
 #todo consider a check whether all files can be written
 #todo investigate best block size configuration
+#todo inform raster package developers of warning given by clusterR in case more than one filename is passed
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -243,8 +244,10 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   cells=maxmemory/8*1024*1024
   raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
   
-  if(verbose)raster::rasterOptions(progress="text")
-  
+  #add a progressbar if verbose=TRUE and prevent printing execution time in any case 
+  #as this is done by custom function hms_span at the very end
+  raster::rasterOptions(progress=if(verbose) "text" else "", timer=F)
+
   # run the processing
   ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
                            filename=out.name, bandorder=bandorder, NAflag=na.out, 
