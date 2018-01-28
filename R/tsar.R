@@ -137,8 +137,6 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
     }else{
       stop("mask input must be a filename or a raster stack")
     }
-    
-    mask.ras=raster::raster(mask)
     ras.in=raster::addLayer(ras.in,mask.ras)
     apply_mask=T
   }else{
