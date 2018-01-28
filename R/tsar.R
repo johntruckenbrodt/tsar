@@ -29,6 +29,7 @@ hms_span=function(start,end){
 #todo consider a check whether all files can be written
 #todo investigate best block size configuration
 #todo inform raster package developers of warning given by clusterR in case more than one filename is passed
+#todo error handling
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -128,6 +129,15 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   #if a mask is defined, append it to the stack
   
   if(!is.null(mask)){
+    
+    if(class(mask)=="character"){
+      mask.ras=raster::raster(mask)
+    }else if(class(mask)=="RasterLayer"){
+      mask.ras=mask
+    }else{
+      stop("mask input must be a filename or a raster stack")
+    }
+    
     mask.ras=raster::raster(mask)
     ras.in=raster::addLayer(ras.in,mask.ras)
     apply_mask=T
