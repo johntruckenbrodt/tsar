@@ -1,7 +1,7 @@
 # Time Series computation Automation for Raster images
 # John Truckenbrodt 2016-2018
 # the function tsar of this script takes a 3D raster stack and 
-# allows for parallelized computation of user-defined multitemporal statistics 
+# allows for parallelized computation of user-defined multitemporal statistics/transformations 
 ################################################################
 # edit the band names of an ENVI hdr file
 hdrbands=function(hdrfile, names){
@@ -13,6 +13,7 @@ hdrbands=function(hdrfile, names){
   writeLines(hdr,hdrfile)
 }
 ################################################################
+#custom function for printing the execution time
 hms_span=function(start,end){
   #https://stackoverflow.com/questions/32100133/print-the-time-a-script-has-been-running-in-r
   dsec=as.numeric(difftime(end,start,unit="secs"))
@@ -52,13 +53,14 @@ hms_span=function(start,end){
 #' @param compress_tif should the written GeoTiff files be compressed?
 #' @param mask an additional file or raster layer; computations on raster.name are only performed where mask is 1, 
 #' otherwise NA is returned for all resulting layers
+#' @param m number of jobs per process; cores*length(nodelist)*m jobs will be executed
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
-              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL){
+              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL, m=1){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -259,7 +261,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   # run the processing
   ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
                            filename=out.name, bandorder=bandorder, NAflag=na.out, 
-                           format=format, datatype=out.dtype, options=options)
+                           format=format, datatype=out.dtype, options=options, m=m)
   
   # edit the band names of the resulting ENVI file to carry information of the computed measures
   if(format=="ENVI")hdrbands(paste0(out.name,".hdr"),bandnames)
