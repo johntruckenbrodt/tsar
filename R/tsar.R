@@ -251,7 +251,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # compute the maximum number of cells which can be held in memory and pass it as raster package option
   cells=maxmemory/8*1024*1024
-  raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
+  raster::rasterOptions(maxmemory=cells, chunksize=cells)
   
   #add a progressbar if verbose=TRUE and prevent printing execution time in any case 
   #as this is done by custom function hms_span at the very end
