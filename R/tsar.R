@@ -30,7 +30,6 @@ hms_span=function(start,end){
 #todo consider a check whether all files can be written
 #todo investigate best block size configuration
 #todo inform raster package developers of warning given by clusterR in case more than one filename is passed
-#todo error handling
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -259,10 +258,14 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   raster::rasterOptions(progress=if(verbose) "text" else "", timer=F)
 
   # run the processing
-  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
-                           filename=out.name, bandorder=bandorder, NAflag=na.out, 
-                           format=format, datatype=out.dtype, options=options, m=m)
-  
+  ras.out=tryCatch({
+    raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
+                             filename=out.name, bandorder=bandorder, NAflag=na.out, 
+                             format=format, datatype=out.dtype, options=options, m=m)
+  },error=function(e)e)
+  if(is(ras.out,"error")){
+    message(ras.out)
+  }
   # edit the band names of the resulting ENVI file to carry information of the computed measures
   if(format=="ENVI")hdrbands(paste0(out.name,".hdr"),bandnames)
   ###################################################
@@ -275,4 +278,3 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   gc(verbose=F)
   if(verbose)cat(sprintf("elapsed time: %s\n",hms_span(start.time,Sys.time())))
 }
-
