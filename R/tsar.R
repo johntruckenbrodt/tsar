@@ -59,7 +59,7 @@ hms_span=function(start,end){
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
-              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL, m=1){
+              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL, m=2){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -256,12 +256,12 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   #add a progressbar if verbose=TRUE and prevent printing execution time in any case 
   #as this is done by custom function hms_span at the very end
   raster::rasterOptions(progress=if(verbose) "text" else "", timer=F)
-
+  
   # run the processing
   ras.out=tryCatch({
-    raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
-                             filename=out.name, bandorder=bandorder, NAflag=na.out, 
-                             format=format, datatype=out.dtype, options=options, m=m)
+    tsar:::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
+                    filename=out.name, bandorder=bandorder, NAflag=na.out, 
+                    format=format, datatype=out.dtype, options=options, m=m)
   },error=function(e)e)
   if(is(ras.out,"error")){
     message(ras.out)
