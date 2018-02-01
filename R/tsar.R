@@ -1,7 +1,7 @@
 # Time Series computation Automation for Raster images
 # John Truckenbrodt 2016-2018
 # the function tsar of this script takes a 3D raster stack and 
-# allows for parallelized computation of user-defined multitemporal statistics/transformations 
+# allows for parallelized computation of user-defined multitemporal statistics 
 ################################################################
 # edit the band names of an ENVI hdr file
 hdrbands=function(hdrfile, names){
@@ -13,7 +13,6 @@ hdrbands=function(hdrfile, names){
   writeLines(hdr,hdrfile)
 }
 ################################################################
-#custom function for printing the execution time
 hms_span=function(start,end){
   #https://stackoverflow.com/questions/32100133/print-the-time-a-script-has-been-running-in-r
   dsec=as.numeric(difftime(end,start,unit="secs"))
@@ -30,6 +29,7 @@ hms_span=function(start,end){
 #todo consider a check whether all files can be written
 #todo investigate best block size configuration
 #todo inform raster package developers of warning given by clusterR in case more than one filename is passed
+#todo error handling
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -52,14 +52,13 @@ hms_span=function(start,end){
 #' @param compress_tif should the written GeoTiff files be compressed?
 #' @param mask an additional file or raster layer; computations on raster.name are only performed where mask is 1, 
 #' otherwise NA is returned for all resulting layers
-#' @param m number of jobs per process; cores*length(nodelist)*m jobs will be executed
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
-              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL, m=1){
+              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -251,21 +250,17 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   
   # compute the maximum number of cells which can be held in memory and pass it as raster package option
   cells=maxmemory/8*1024*1024
-  raster::rasterOptions(maxmemory=cells, chunksize=cells)
+  raster::rasterOptions(maxmemory=cells, chunksize=cells/100)
   
   #add a progressbar if verbose=TRUE and prevent printing execution time in any case 
   #as this is done by custom function hms_span at the very end
   raster::rasterOptions(progress=if(verbose) "text" else "", timer=F)
 
   # run the processing
-  ras.out=tryCatch({
-    raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
-                             filename=out.name, bandorder=bandorder, NAflag=na.out, 
-                             format=format, datatype=out.dtype, options=options, m=m)
-  },error=function(e)e)
-  if(is(ras.out,"error")){
-    message(ras.out)
-  }
+  ras.out=raster::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
+                           filename=out.name, bandorder=bandorder, NAflag=na.out, 
+                           format=format, datatype=out.dtype, options=options)
+  
   # edit the band names of the resulting ENVI file to carry information of the computed measures
   if(format=="ENVI")hdrbands(paste0(out.name,".hdr"),bandnames)
   ###################################################
@@ -278,3 +273,4 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   gc(verbose=F)
   if(verbose)cat(sprintf("elapsed time: %s\n",hms_span(start.time,Sys.time())))
 }
+
