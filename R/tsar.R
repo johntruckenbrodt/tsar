@@ -52,14 +52,13 @@ hms_span=function(start,end){
 #' @param compress_tif should the written GeoTiff files be compressed?
 #' @param mask an additional file or raster layer; computations on raster.name are only performed where mask is 1, 
 #' otherwise NA is returned for all resulting layers
-#' @param m number of jobs per process; cores*length(nodelist)*m jobs will be executed
 #' @return None
 #' @export
 #' @seealso \code{\link[raster]{stack}}, \code{\link[raster]{calc}}, \code{\link[raster]{clusterR}}, \code{\link[snow]{makeCluster}}
 
 tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dtype="FLT4S", 
               separate=T, na.in=NA, na.out=-99, overwrite=F, verbose=T, nodelist=NULL, 
-              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL, m=2){
+              bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL){
   require(raster)
   require(snow)
   require(doSNOW)
@@ -261,7 +260,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   ras.out=tryCatch({
     tsar:::clusterR(ras.in, raster::calc, args=list(fun=run), cl=cl, bylayer=separate,
                     filename=out.name, bandorder=bandorder, NAflag=na.out, 
-                    format=format, datatype=out.dtype, options=options, m=m)
+                    format=format, datatype=out.dtype, options=options, m=1)
   },error=function(e)e)
   if(is(ras.out,"error")){
     message(ras.out)
