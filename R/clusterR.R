@@ -62,7 +62,10 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       n <- which.max(ready)
       d <- .recvData(cl[[n]])
       # print(sprintf('job %i finished by node %i', d$tag, n))
-      if (! d$success ){ stop('cluster error') }
+      if (! d$success ){
+        print(d$value)
+        stop('cluster error')
+      }
       
       received=received+1
       raster::pbStep(pb, received)
@@ -75,33 +78,37 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
             out <- raster::brick(out, nl=nl)
           }
           res <- matrix(NA, nrow=raster::ncell(out), ncol=nl)
-        } 
+        }
         j <- d$tag
         #insert the values of the current process into the matrix
         i1=raster::cellFromRowCol(out, tr$row[j], 1)
         i2=raster::cellFromRowCol(out, tr$row2[j], raster::ncol(out))
-        res[i1:i2, ] <- d$value#d$value$value
+        res[i1:i2, ] <- d$value
         
       }else{
         if (received==1) {
           #nl is the number of layers here since each layer is written in one column
           nl <- NCOL(d$value) 
-          if (nl > 1) {
-            out <- raster::brick(out, nl=nl)
-          }
-          out <- raster::writeStart(out, filename=filename, ...)
-        } 
-        out <- raster::writeValues(out, d$value, tr$row[d$tag])
+          outlist <- lapply(filename,function(x)raster::writeStart(out, filename=x, ...))
+        }
+        for(i in seq(nl)){
+          # print(sprintf('writing result %i.%i to file %s', d$tag, i, filename[i]))
+          outlist[[i]] <- raster::writeValues(outlist[[i]], d$value[,i], tr$row[d$tag])
+        }
       }
-      queue=c(queue[-n],n)
+      queue=c(n,queue[-n])
+      timeout=1
     }else{
       i=submitted+1
       if(i<=tr$n){
         node=queue[1]
-        # print(sprintf('assigning job %i to node %i', i, node))
+        # print(sprintf('assigning job %i of %i to node %i', i, tr$n, node))
         .sendCall(cl[[node]], clusfun, list(fun, i), tag=i)
         queue=c(queue[-1],node)
         maxnode=max(maxnode,node)
+        if(maxnode==nodes){
+          timeout=NULL
+        }
         submitted=i
       }
     }
@@ -113,10 +120,13 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       out <- raster::writeRaster(out, filename, ...)
     }
   }else{
-    out <- raster::writeStop(out)
+    for(i in seq(nl)){
+      outlist[[i]] <- raster::writeStop(outlist[[i]])
+      out=outlist
+    }
   }
   raster::pbClose(pb)
-  return(out)
+  return(if(class(out)=="list") raster::brick(out) else out)
 }
 
 

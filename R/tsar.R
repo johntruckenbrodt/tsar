@@ -61,7 +61,6 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
               bandorder="BSQ", maxmemory=100, compress_tif=F, mask=NULL){
   require(raster)
   require(snow)
-  require(doSNOW)
   
   # abort if multiple values for out.dtype are defined
   if(length(out.dtype)>1){
@@ -206,9 +205,6 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   new.env=new.env()
   for(fun in functions)assign(fun,value=e[[fun]],envir=new.env)
   
-  # list all currently loaded packages (to be passed to the parallel workers)
-  packages=gsub("package:","",grep("package",search(),value=T))
-  
   ###################################################
   # register parallel computing backend and pass the newly created environment
   
@@ -226,7 +222,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   }else{
     cl=snow::makeCluster(cores,type="SOCK")
   }
-  doSNOW::registerDoSNOW(cl)
+
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
   # setup options for file writing
