@@ -60,7 +60,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
     ready=socketSelect(socklist,F,timeout=timeout)
     if (maxnode==nodes & sum(ready) > 0){
       n <- which.max(ready)
-      d <- .recvData(cl[[n]])
+      d <- parallel:::recvData(cl[[n]])
       # print(sprintf('job %i finished by node %i', d$tag, n))
       if (! d$success ){
         print(d$value)
@@ -96,6 +96,9 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
           outlist[[i]] <- raster::writeValues(outlist[[i]], d$value[,i], tr$row[d$tag])
         }
       }
+      parallel:::sendCall(cl[[n]],function()rm(list=ls()),list())
+      rm(d)
+      gc()
       queue=c(n,queue[-n])
       timeout=1
     }else{
@@ -103,7 +106,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       if(i<=tr$n){
         node=queue[1]
         # print(sprintf('assigning job %i of %i to node %i', i, tr$n, node))
-        .sendCall(cl[[node]], clusfun, list(fun, i), tag=i)
+        parallel:::sendCall(cl[[node]], clusfun, list(fun, i), tag=i)
         queue=c(queue[-1],node)
         maxnode=max(maxnode,node)
         if(maxnode==nodes){
@@ -116,17 +119,20 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
   if(cpim){
     #set the values of the matrix into the raster brick and write it to disk
     out <- raster::setValues(out, res)
-    if (filename != '') {
+    if(filename != ''){
       out <- raster::writeRaster(out, filename, ...)
     }
   }else{
     for(i in seq(nl)){
       outlist[[i]] <- raster::writeStop(outlist[[i]])
-      out=outlist
+      outlist[[i]]=NULL
+      gc()
     }
+    out=outlist
   }
   raster::pbClose(pb)
-  return(if(class(out)=="list") raster::brick(out) else out)
+  return(NULL)
+  # return(if(class(out)=="list") raster::brick(out) else out)
 }
 
 
