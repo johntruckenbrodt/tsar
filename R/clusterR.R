@@ -47,6 +47,12 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
     }
   }
   
+  cleanup=function(){
+    rm(list=ls())
+    rm(list=ls(name=.GlobalEnv))
+    gc()
+  }
+  
   cpim=raster::canProcessInMemory(x)
   
   node=1
@@ -96,8 +102,8 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
           outlist[[i]] <- raster::writeValues(outlist[[i]], d$value[,i], tr$row[d$tag])
         }
       }
-      parallel:::sendCall(cl[[n]],function()rm(list=ls()),list())
-      rm(d)
+      parallel:::sendCall(cl[[n]],cleanup,list())
+      d <- parallel:::recvData(cl[[n]])
       gc()
       queue=c(n,queue[-n])
       timeout=1
