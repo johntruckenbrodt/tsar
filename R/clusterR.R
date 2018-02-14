@@ -46,7 +46,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       raster::getValues(r)
     }
   }
-  
+  #function for cleaning memory on individual nodes
   cleanup=function(){
     rm(list=ls())
     rm(list=ls(name=.GlobalEnv))
@@ -54,13 +54,12 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
   }
   
   cpim=raster::canProcessInMemory(x)
-  
-  node=1
-  maxnode=0
-  timeout=1
-  submitted=0
-  received=0
-  queue=seq(nodes)
+
+  maxnode=0        #the maximum node id which a job has been assigned to
+  timeout=1        #the time in seconds to wait for finished results from the nodes
+  submitted=0      #the number of submitted jobs
+  received=0       #the number of received jobs
+  queue=seq(nodes) #a simple queue for job assignment
   while(received<tr$n){
     socklist <- lapply(cl, function(x) x$con)
     ready=socketSelect(socklist,F,timeout=timeout)
@@ -102,19 +101,27 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
           outlist[[i]] <- raster::writeValues(outlist[[i]], d$value[,i], tr$row[d$tag])
         }
       }
+      #perform a memory cleanup on the node
       parallel:::sendCall(cl[[n]],cleanup,list())
       d <- parallel:::recvData(cl[[n]])
       gc()
+      
+      #move the node id to the start of the processing queue and reset the timeout to 1 sec
       queue=c(n,queue[-n])
       timeout=1
     }else{
       i=submitted+1
       if(i<=tr$n){
+        #pick the first node in the processing queue and assign a job to it
         node=queue[1]
         # print(sprintf('assigning job %i of %i to node %i', i, tr$n, node))
         parallel:::sendCall(cl[[node]], clusfun, list(fun, i), tag=i)
+        
+        #move the node to the last position in the queue and possibly increase the maximum node id used
         queue=c(queue[-1],node)
         maxnode=max(maxnode,node)
+        #if all nodes have been asigned to a job increase the timeout to infinity
+        #i.e. don't assign another job until one node has finished its job
         if(maxnode==nodes){
           timeout=NULL
         }
@@ -129,9 +136,10 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       out <- raster::writeRaster(out, filename, ...)
     }
   }else{
+    #stop writing the individual files and delete their handlers
     while(length(outlist)>0){
-      outlist[[i]] <- raster::writeStop(outlist[[i]])
-      outlist[[i]]=NULL
+      outlist[[1]] <- raster::writeStop(outlist[[1]])
+      outlist[[1]]=NULL
       gc()
     }
   }
