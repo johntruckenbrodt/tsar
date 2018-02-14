@@ -92,7 +92,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
         res[i1:i2, ] <- d$value
         
       }else{
-        if (received==1) {
+        if(received==1){
           #nl is the number of layers here since each layer is written in one column
           nl <- NCOL(d$value) 
           outlist <- lapply(filename,function(x)raster::writeStart(out, filename=x, ...))
@@ -129,12 +129,11 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       out <- raster::writeRaster(out, filename, ...)
     }
   }else{
-    for(i in seq(nl)){
+    while(length(outlist)>0){
       outlist[[i]] <- raster::writeStop(outlist[[i]])
       outlist[[i]]=NULL
       gc()
     }
-    out=outlist
   }
   raster::pbClose(pb)
   return(NULL)
