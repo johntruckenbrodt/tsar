@@ -30,6 +30,7 @@ hms_span=function(start,end){
 #todo consider a check whether all files can be written
 #todo investigate best block size configuration
 #todo inform raster package developers of warning given by clusterR in case more than one filename is passed
+#todo prevent overwriting files in the case where only some of the outputs of a single worker already exist
 
 #' scalable time-series computations on 3D raster stacks
 #' @param raster.name a 3D raster object with dimensions in order lines-samples-time
@@ -96,10 +97,10 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   # set the nodata flag
   if(!is.na(na.in))raster::NAvalue(ras.in)=na.in
   
-  # define the input dimensions
-  rows=dim(ras.in)[1]
-  cols=dim(ras.in)[2]
-  bands=dim(ras.in)[3]
+  # query the input dimensions
+  rows=raster::nrow(ras.in)
+  cols=raster::ncol(ras.in)
+  bands=raster::nlayers(ras.in)
   ###################################################
   # perform a test computation on a single pixel, assess the output length and parse the bandnames accordingly
   
@@ -174,17 +175,17 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
       
       out.name=out.name[indices]
     }
-    
-    out.nfiles=length(out.name)
+    out.nbands=length(out.name)
   }
   ###################################################
   # define the function for executing the workers
   
-  #further reading/improvement:
+  #further reading and potential improvement:
   #https://stackoverflow.com/questions/44593123/raster-calculation-on-rasterstack-only-if-not-na-in-other-rasterlayer
   
   run=function(x){
     if(apply_mask){
+      #the mask is appended to the stack as last layer thus computations are only performed if its value is one
       if(!is.na(x[length(x)])&&x[length(x)]==1){
         result=unlist(lapply(workers,function(fun)fun(x[-length(x)])))
       }else{
@@ -198,7 +199,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   ###################################################
   # set up the environment to be passed to the parallel workers
   
-  # this is likely not to work under Windows, see this link:
+  # this is likely not going to work under Windows, see this link:
   # http://stackoverflow.com/questions/17345271/r-how-does-a-foreach-loop-find-a-function-that-should-be-invoked
   e=globalenv()
   functions=ls(e)[sapply(ls(e),function(x)class(e[[x]]))=="function"]
@@ -222,7 +223,7 @@ tsar=function(raster.name, workers, cores, out.name, out.bandnames=NULL, out.dty
   }else{
     cl=snow::makeCluster(cores,type="SOCK")
   }
-
+  
   snow::clusterExport(cl,list=ls(new.env),envir=new.env)
   ###################################################
   # setup options for file writing
