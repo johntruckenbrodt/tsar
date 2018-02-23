@@ -8,39 +8,36 @@
 clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, ...) {
   require(raster)
   require(parallel)
-  if (is.null(cl)) {
+  if(is.null(cl)){
     cl <- raster::getCluster()
-    on.exit( raster::returnCluster() )
+    on.exit(raster::returnCluster())
   }
-  if (!is.null(export)) {
+  if(!is.null(export)){
     parallel::clusterExport(cl, export)	
   }
-  
-  .sendCall <- eval(parse(text="parallel:::sendCall"))
-  .recvData <- eval(parse(text="parallel:::recvData"))
   
   nodes <- length(cl)
   
   out <- raster::raster(x)
   
   m <- max(1, round(m))
-  tr <- raster::blockSize(x, minblocks=nodes*m )
-  if (tr$n < nodes) {
+  tr <- raster::blockSize(x, minblocks=nodes*m)
+  if(tr$n < nodes){
     nodes <- tr$n
   }
   
   tr$row2 <- tr$row + tr$nrows - 1
   pb <- raster::pbCreate(tr$n, label='clusterR', ...)
   
-  if (!is.null(args)){
+  if(!is.null(args)){
     stopifnot(is.list(args))
-    clusfun <- function(fun, i) {
+    clusfun <- function(fun, i){
       r <- raster::crop(x, raster::extent(out, r1=tr$row[i], r2=tr$row2[i], c1=1, c2=raster::ncol(out)))
       r <- do.call(fun, c(r, args))
       raster::getValues(r)
     }
-  } else {
-    clusfun <- function(fun, i) {
+  }else{
+    clusfun <- function(fun, i){
       r <- raster::crop(x, raster::extent(out, r1=tr$row[i], r2=tr$row2[i], c1=1, c2=raster::ncol(out)))
       r <- fun(r)
       raster::getValues(r)
@@ -54,7 +51,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
   }
   
   cpim=raster::canProcessInMemory(x)
-
+  
   maxnode=0        #the maximum node id which a job has been assigned to
   timeout=1        #the time in seconds to wait for finished results from the nodes
   submitted=0      #the number of submitted jobs
@@ -62,12 +59,12 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
   queue=seq(nodes) #a simple queue for job assignment
   while(received<tr$n){
     socklist <- lapply(cl, function(x) x$con)
-    ready=socketSelect(socklist,F,timeout=timeout)
+    ready=socketSelect(socklist, F, timeout=timeout)
     if (maxnode==nodes & sum(ready) > 0){
       n <- which.max(ready)
       d <- parallel:::recvData(cl[[n]])
       # print(sprintf('job %i finished by node %i', d$tag, n))
-      if (! d$success ){
+      if(! d$success){
         print(d$value)
         stop('cluster error')
       }
@@ -77,9 +74,9 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
       
       if(cpim){
         #initialize a brick and matrix to write the results to
-        if (received==1) {
+        if(received==1){
           nl <- NCOL(d$value)
-          if (nl > 1) {
+          if(nl > 1){
             out <- raster::brick(out, nl=nl)
           }
           res <- matrix(NA, nrow=raster::ncell(out), ncol=nl)
@@ -102,7 +99,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
         }
       }
       #perform a memory cleanup on the node
-      parallel:::sendCall(cl[[n]],cleanup,list())
+      parallel:::sendCall(cl[[n]], cleanup, list())
       d <- parallel:::recvData(cl[[n]])
       gc()
       
@@ -118,9 +115,9 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
         parallel:::sendCall(cl[[node]], clusfun, list(fun, i), tag=i)
         
         #move the node to the last position in the queue and possibly increase the maximum node id used
-        queue=c(queue[-1],node)
-        maxnode=max(maxnode,node)
-        #if all nodes have been asigned to a job increase the timeout to infinity
+        queue=c(queue[-1], node)
+        maxnode=max(maxnode, node)
+        #if all nodes have been assigned to a job increase the timeout to infinity
         #i.e. don't assign another job until one node has finished its job
         if(maxnode==nodes){
           timeout=NULL
@@ -132,7 +129,7 @@ clusterR <- function(x, fun, args=NULL, export=NULL, filename='', cl=NULL, m=2, 
   if(cpim){
     #set the values of the matrix into the raster brick and write it to disk
     out <- raster::setValues(out, res)
-    if(filename != ''){
+    if(! '' %in% filename){
       out <- raster::writeRaster(out, filename, ...)
     }
   }else{
