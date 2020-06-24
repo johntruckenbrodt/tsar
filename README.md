@@ -30,7 +30,7 @@ ras = raster::stack(c("timestep1.tif", "timestep2.tif", "timestep3.tif"))
 
 # define the NA value; this might not be necessary if the value is stored in the files
 # the input files need to all have the same NA value
-raster::NAvalue(raster.ras)=-99
+raster::NAvalue(ras)=-99
 
 # define a list of functions with names
 workers = list(minimum=function(x)return(min(x, na.rm=T)),
